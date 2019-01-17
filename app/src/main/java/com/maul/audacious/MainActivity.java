@@ -22,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
 
     ImageButton m_play, m_prev, m_next;
     TextView m_text;
-    SeekBar m_seek;
+    SeekBar m_seek, m_volume;
     static Boolean m_connected = false;
     String m_filePath;
     byte[] m_imageRaw;
@@ -96,6 +96,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        m_volume = findViewById(R.id.volume);
+
+        m_volume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) { }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                try {
+                    String a = "audtool set-volume " + Integer.toString(seekBar.getProgress());
+                    AudaciousCore.sendCommand(a);
+                } catch (Exception e) {
+                    Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
+                }
+            }
+        });
+
         m_imageView = findViewById(R.id.imageView);
 
         Runnable myRunnable = new Runnable() {
@@ -120,12 +141,17 @@ public class MainActivity extends AppCompatActivity {
         try {
             String tmp;
 
+            tmp = AudaciousCore.sendCommand("audtool get-volume");
+            m_volume.setProgress(Integer.parseInt(tmp.substring(0, tmp.length() - 1)));
+
             m_text.setText(AudaciousCore.sendCommand("audtool current-song"));
             tmp = AudaciousCore.sendCommand("audtool current-song-length-seconds");
             m_seek.setMax(Integer.parseInt(tmp.substring(0, tmp.length() - 1)));
             tmp = AudaciousCore.sendCommand("audtool current-song-output-length-seconds");
             m_seek.setProgress(Integer.parseInt(tmp.substring(0, tmp.length() - 1)));
             tmp = AudaciousCore.sendCommand("audtool current-song-filename");
+
+
 
             if (m_filePath != tmp) {
                 m_filePath = tmp;

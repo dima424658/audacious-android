@@ -61,12 +61,8 @@ public class AudaciousCore {
                 sendCommand("metaflac --export-picture-to=\"/var/tmp/audtool-remote/" + name + "\" \"" + path + "\"");
                 break;
             case "mp3":
-                try {
-                    //   String a = "ffmpeg -i \"" + path + "\" \"/var/tmp/audtool-remote/" + name + "\"";
-                    // sendCommand(a);
-                } catch (Exception a) {
-
-                }
+                    String a = "ffmpeg -i \"" + path + "\" \"/var/tmp/audtool-remote/" + name + "\"";
+                    sendCommand(a);
                 break;
             case "m4a":
                 break;
