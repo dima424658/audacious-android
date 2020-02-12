@@ -156,10 +156,12 @@ public class MainActivity extends AppCompatActivity {
             if (m_filePath != tmp) {
                 m_filePath = tmp;
                 m_imageRaw = AudaciousCore.getImage(tmp.substring(0, tmp.length() - 1));
-                if (m_imageRaw != null) {
-                    Bitmap imageBit = BitmapFactory.decodeByteArray(m_imageRaw, 0, m_imageRaw.length);
-                    m_imageView.setImageBitmap(imageBit);
-                }
+                Bitmap imageBit;
+                if (m_imageRaw != null)
+                    imageBit = BitmapFactory.decodeByteArray(m_imageRaw, 0, m_imageRaw.length);
+                else
+                    imageBit = BitmapFactory.decodeResource(getResources(), R.drawable.no_cover);
+                m_imageView.setImageBitmap(imageBit);
             }
 
             if(AudaciousCore.sendCommand("audtool playback-status").equals("playing\n"))

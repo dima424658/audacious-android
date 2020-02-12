@@ -81,7 +81,6 @@ public class AudaciousCore {
             return imageStream.toByteArray();
         }
 
-
         if (sendCommand("[ -f \"" + path.substring(0, path.lastIndexOf("/") + 1) + "cover.jpg" + "\" ] && echo \"true\" || echo \"false\"").equals("true\n")) {
             ChannelSftp channel = (ChannelSftp) m_session.openChannel("sftp");
             channel.connect();
@@ -90,6 +89,38 @@ public class AudaciousCore {
 
             return imageStream.toByteArray();
         }
+
+        String f = "";
+        String cmd = sendCommand("ls \"" + path.substring(0, path.lastIndexOf("/") + 1) + "\"*.jpg");
+
+        if(cmd.indexOf("\n") > 0)
+            f = cmd.substring(0, cmd.indexOf("\n") );
+        else
+        {
+            cmd = sendCommand("ls \"" + path.substring(0, path.lastIndexOf("/") + 1) + "\"*.jpeg");
+
+            if(cmd.indexOf("\n") > 0)
+                f = cmd.substring(0, cmd.indexOf("\n") );
+            else
+            {
+                cmd = sendCommand("ls \"" + path.substring(0, path.lastIndexOf("/") + 1) + "\"*.png");
+
+                if(cmd.indexOf("\n") > 0)
+                    f = cmd.substring(0, cmd.indexOf("\n") );
+            }
+        }
+
+        if(!f.equals(""))
+        {
+            ChannelSftp channel = (ChannelSftp) m_session.openChannel("sftp");
+            channel.connect();
+            channel.get(f, imageStream);
+            channel.disconnect();
+
+            return imageStream.toByteArray();
+        }
+
+
 
         return null;
     }
