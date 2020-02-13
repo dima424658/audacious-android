@@ -32,12 +32,9 @@ public class ConnectActivity extends AppCompatActivity {
                     editor.putString("hostname", address.getText().toString());
                     editor.commit();
 
-                    MainActivity.m_connected = true;
                     finish();
                 } catch (Exception e) {
                     Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                    MainActivity.m_connected = false;
-                    return;
                 }
             }
         });

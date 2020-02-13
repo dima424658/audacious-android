@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
@@ -20,17 +21,32 @@ import  android.content.SharedPreferences;
 
 public class MainActivity extends AppCompatActivity {
 
-    ImageButton m_play, m_prev, m_next;
-    TextView m_text;
-    SeekBar m_seek, m_volume;
-    static Boolean m_connected = false;
-    String m_filePath;
-    byte[] m_imageRaw;
-    Bitmap m_imageBitmap;
-    ImageView m_imageView;
+    private ImageButton m_play, m_prev, m_next;
+    private TextView m_text;
+    private SeekBar m_seek, m_volume;
+    private String m_filePath = "";
+    private ImageView m_imageView;
+    private Bitmap m_imageBitmap;
+    private boolean m_playing;
 
-    static String username, password, hostname;
-    static int port;
+
+    private final Runnable f_setPlay = new Runnable() {
+        public void run() {
+            m_play.setImageResource(android.R.drawable.ic_media_pause);
+        }
+    };
+
+    private final Runnable f_setPause = new Runnable() {
+        public void run() {
+            m_play.setImageResource(android.R.drawable.ic_media_play);
+        }
+    };
+
+    private final Runnable f_setImage = new Runnable() {
+        public void run() {
+            m_imageView.setImageBitmap(m_imageBitmap);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,39 +57,23 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setThreadPolicy(policy);
 
         connect();
-        if (m_connected == false) {
-            Intent intent = new Intent(this, ConnectActivity.class);
-            startActivity(intent);
-        }
 
         m_play = findViewById(R.id.button_play);
         m_play.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                try {
-                    AudaciousCore.sendCommand("audtool playback-playpause");
-                } catch (Exception e) {
-                    Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                }
+                AudaciousCore.playPause();
             }
         });
         m_next = findViewById(R.id.button_next);
         m_next.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                try {
-                    AudaciousCore.sendCommand("audtool playlist-advance");
-                } catch (Exception e) {
-                    Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                }
+                AudaciousCore.playNext();
             }
         });
         m_prev = findViewById(R.id.button_previous);
         m_prev.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                try {
-                    AudaciousCore.sendCommand("audtool playlist-reverse");
-                } catch (Exception e) {
-                    Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                }
+                AudaciousCore.playPrevious();
             }
         });
         m_text = findViewById(R.id.textView);
@@ -81,19 +81,16 @@ public class MainActivity extends AppCompatActivity {
 
         m_seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                try {
-                    String a = "audtool playback-seek " + Integer.toString(seekBar.getProgress());
-                    AudaciousCore.sendCommand(a);
-                } catch (Exception e) {
-                    Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                }
+                AudaciousCore.setPlaybackSeek(seekBar.getProgress());
             }
         });
 
@@ -101,34 +98,33 @@ public class MainActivity extends AppCompatActivity {
 
         m_volume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                try {
-                    String a = "audtool set-volume " + Integer.toString(seekBar.getProgress());
-                    AudaciousCore.sendCommand(a);
-                } catch (Exception e) {
-                    Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                }
+                AudaciousCore.setVolume(seekBar.getProgress());
             }
         });
 
         m_imageView = findViewById(R.id.imageView);
+
+        m_playing = AudaciousCore.isPlaying();
 
         Runnable myRunnable = new Runnable() {
             public void run() {
                 while (true) {
                     try {
                         Thread.sleep(500);
+                        update();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
                     }
-                    update();
                 }
             }
         };
@@ -136,57 +132,52 @@ public class MainActivity extends AppCompatActivity {
         thread.start();
     }
 
-    public void update() {
-        if (!m_connected) return;
-        try {
-            String tmp;
+    private void update() {
+        if (!AudaciousCore.isConnected())
+            connect();
+        else {
+            m_volume.setProgress(AudaciousCore.getVolume());
+            m_text.setText(AudaciousCore.getCurrentSong());
+            m_seek.setMax(AudaciousCore.getCurrentSongLength());
+            m_seek.setProgress(AudaciousCore.getCurrentSongOutputLength());
 
-            tmp = AudaciousCore.sendCommand("audtool get-volume");
-            m_volume.setProgress(Integer.parseInt(tmp.substring(0, tmp.length() - 1)));
+            String tmp = AudaciousCore.getCurrentSongFilename();
 
-            m_text.setText(AudaciousCore.sendCommand("audtool current-song"));
-            tmp = AudaciousCore.sendCommand("audtool current-song-length-seconds");
-            m_seek.setMax(Integer.parseInt(tmp.substring(0, tmp.length() - 1)));
-            tmp = AudaciousCore.sendCommand("audtool current-song-output-length-seconds");
-            m_seek.setProgress(Integer.parseInt(tmp.substring(0, tmp.length() - 1)));
-            tmp = AudaciousCore.sendCommand("audtool current-song-filename");
+            if (tmp != null)
+                if (!m_filePath.equals(tmp)) {
+                    m_filePath = tmp;
+                    byte[] imageRaw = AudaciousCore.getImageRaw(tmp.substring(0, tmp.length() - 1));
+                    if (imageRaw != null)
+                        m_imageBitmap = BitmapFactory.decodeByteArray(imageRaw, 0, imageRaw.length);
+                    else
+                        m_imageBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.no_cover);
 
+                    runOnUiThread(f_setImage);
+                }
 
-
-            if (m_filePath != tmp) {
-                m_filePath = tmp;
-                m_imageRaw = AudaciousCore.getImage(tmp.substring(0, tmp.length() - 1));
-                Bitmap imageBit;
-                if (m_imageRaw != null)
-                    imageBit = BitmapFactory.decodeByteArray(m_imageRaw, 0, m_imageRaw.length);
-                else
-                    imageBit = BitmapFactory.decodeResource(getResources(), R.drawable.no_cover);
-                m_imageView.setImageBitmap(imageBit);
+            if (AudaciousCore.isPlaying()) {
+                runOnUiThread(f_setPlay);
+                m_playing = true;
             }
 
-            if(AudaciousCore.sendCommand("audtool playback-status").equals("playing\n"))
-                m_play.setImageResource(android.R.drawable.ic_media_pause);
-            else
-                m_play.setImageResource(android.R.drawable.ic_media_play);
-
-        } catch (Exception e) {
-            Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
+            if (!AudaciousCore.isPlaying() && m_playing) {
+                runOnUiThread(f_setPause);
+                m_playing = false;
+            }
         }
-        return;
     }
 
     private void connect() {
-        try {
+        SharedPreferences prefs = getSharedPreferences("connection", MODE_PRIVATE);
+        AudaciousCore.connect(prefs.getString("username", ""), prefs.getString("password", ""), prefs.getString("hostname", ""), prefs.getInt("port", 0));
 
-            SharedPreferences prefs = getSharedPreferences("connection", MODE_PRIVATE);
-            AudaciousCore.connect(prefs.getString("username",""), prefs.getString("password",""), prefs.getString("hostname",""), prefs.getInt("port", 0));
+        if (!AudaciousCore.isConnected()) {
+            String msg = "Failed to connect to " + prefs.getString("hostname", "") + ":" + prefs.getInt("port", 0);
+            Snackbar.make(findViewById(android.R.id.content), msg, Snackbar.LENGTH_LONG).show();
+            Log.w("MainActivity", msg);
 
-            m_connected = true;
-        } catch (Exception e) {
-            Snackbar.make(findViewById(android.R.id.content), e.getMessage(), Snackbar.LENGTH_LONG).show();
-            m_connected = false;
-            return;
+            Intent intent = new Intent(this, ConnectActivity.class);
+            startActivity(intent);
         }
-        return;
     }
 }
