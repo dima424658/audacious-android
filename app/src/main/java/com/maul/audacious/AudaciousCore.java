@@ -1,6 +1,12 @@
 package com.maul.audacious;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.support.annotation.NonNull;
 import android.util.Log;
+import android.view.View;
 
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
@@ -12,6 +18,7 @@ import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpException;
@@ -31,6 +38,7 @@ public class AudaciousCore {
             m_session.connect();
 
             sendCommand("mkdir /var/tmp/audtool-remote");
+
         } catch (JSchException e) {
             Log.w("AudaciousCore", e.getMessage());
         }
@@ -64,6 +72,36 @@ public class AudaciousCore {
 
     public static String getCurrentSongFilename() {
         return sendCommand("audtool current-song-filename");
+    }
+
+    public static String getPlaylistSong(int arg) {
+        String tmp = sendCommand("audtool playlist-song " + (arg + 1));
+        return tmp.substring(0, tmp.length() - 1);
+    }
+
+    public static String getPlaylistSongLength(int arg){
+        String tmp = sendCommand("audtool playlist-song-length " + (arg + 1));
+        return tmp.substring(0, tmp.length() - 1);
+    }
+
+    public static void playlistDelete(int arg){
+        sendCommand("audtool playlist-delete " + (arg + 1));
+    }
+
+    public static void playlistJump(int arg){
+        sendCommand("audtool playlist-jump " + (arg + 1));
+    }
+
+    public static void playlistClear(){
+        sendCommand("audtool playlist-clear");
+    }
+
+    public static int getPlaylistLength(){
+        return stringToInt(sendCommand("audtool playlist-length"));
+    }
+
+    public static int getPlaylistPosition(){
+        return stringToInt(sendCommand("audtool playlist-position")) - 1;
     }
 
 
@@ -101,7 +139,7 @@ public class AudaciousCore {
         }
     }
 
-    private static String sendCommand(String command) {
+    public static String sendCommand(String command) {
         StringBuilder outputBuffer;
         ChannelExec channel = null;
         InputStream output;
@@ -133,7 +171,12 @@ public class AudaciousCore {
     }
 
     public static byte[] getImageRaw(String path) {
-        String extension = path.substring(path.lastIndexOf(".") + 1);
+        if(path == null)
+            return null;
+        if(path.length() < 2)
+            return null;
+
+        String extension = path.substring(path.lastIndexOf(".") + 1, path.length() - 1);
         String name = path.substring(path.lastIndexOf("/") + 1, path.lastIndexOf(".")) + ".jpg";
 
         switch (extension) {

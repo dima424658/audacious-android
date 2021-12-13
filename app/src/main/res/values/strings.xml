@@ -1,20 +1,10 @@
 <resources>
     <string name="app_name">Audacious</string>
-    <string name="title_activity_connect">Connect</string>
     <!-- Strings related to login -->
-    <string name="prompt_address">IP Address</string>
-    <string name="prompt_port">Port</string>
-    <string name="prompt_username">Username</string>
-    <string name="prompt_password">Password</string>
-    <string name="action_connect">Connect</string>
-    <string name="error_invalid_email">This email address is invalid</string>
-    <string name="error_invalid_password">This password is too short</string>
-    <string name="error_incorrect_password">This password is incorrect</string>
-    <string name="error_field_required">This field is required</string>
-    <string name="permission_rationale">"Contacts permissions are needed for providing email
-        completions."
-    </string>
-    <string name="title_activity_player">PlayerActivity</string>
-    <string name="tab_text_1">Tab 1</string>
-    <string name="tab_text_2">Tab 2</string>
+    <string name="connect_ip">IP Address</string>
+    <string name="connect_port">Port</string>
+    <string name="connect_username">Username</string>
+    <string name="connect_password">Password</string>
+    <string name="connect_button">Connect</string>
+    <string name="title_activity_main">Audacious</string>
 </resources>
